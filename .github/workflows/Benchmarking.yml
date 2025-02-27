@@ -1,9 +1,7 @@
 name: Benchmarking
 
 on:
-  push:
-    branches:
-      - master
+  pull_request:
 
 jobs:
   benchmark:
@@ -12,6 +10,8 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Julia
         uses: julia-actions/setup-julia@v2
@@ -21,12 +21,30 @@ jobs:
       - name: Install Dependencies
         run: julia --project=benchmarks/ -e 'using Pkg; Pkg.instantiate()'
 
-      - name: Run Benchmarks and Generate Reports
-        run: julia --project=benchmarks/ -e 'using DynamicPPLBenchmarks; weave_benchmarks()'
+      - name: Run Benchmarks and Capture Output
+        id: run_benchmarks
+        run: |
+          # Capture the output of versioninfo and benchmark results
+          version_info=$(julia -e 'versioninfo()')
+          benchmark_output=$(julia --project=benchmarks benchmarks/benchmarks.jl)
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+          # Format the output to match the desired comment structure
+          combined_output="## Computer Information\n\`\`\`\n$version_info\n\`\`\`\n\n## Benchmark Report\n$benchmark_output\n"
+
+          # Set the combined output as a GitHub Actions output
+          echo "::set-output name=combined_output::$combined_output"
+
+      - name: Find Existing Comment
+        uses: peter-evans/find-comment@v3
+        id: find_comment
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./benchmarks/results
-          publish_branch: gh-pages
+          issue-number: ${{ github.event.pull_request.number }}
+          comment-author: github-actions[bot]
+
+      - name: Post Benchmark Results as PR Comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: "${{ steps.run_benchmarks.outputs.combined_output }}"
+          comment-id: ${{ steps.find_comment.outputs.comment-id }}
+          edit-mode: replace
