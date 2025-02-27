@@ -28,11 +28,9 @@ jobs:
           version_info=$(julia -e 'using InteractiveUtils; versioninfo()')
           benchmark_output=$(julia --project=benchmarks benchmarks/benchmarks.jl)
 
-          # Format the output to match the desired comment structure
-          combined_output="## Computer Information\n\`\`\`\n$version_info\n\`\`\`\n\n## Benchmark Report\n$benchmark_output\n"
-
-          # Set the combined output as a GitHub Actions output
-          echo "::set-output name=combined_output::$combined_output"
+          # Set the versioninfo and benchmark output as GitHub Actions outputs
+          echo "version_info=$version_info" >> $GITHUB_ENV
+          echo "benchmark_output=$benchmark_output" >> $GITHUB_ENV
 
       - name: Find Existing Comment
         uses: peter-evans/find-comment@v3
@@ -45,6 +43,12 @@ jobs:
         uses: peter-evans/create-or-update-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
-          body: "${{ steps.run_benchmarks.outputs.combined_output }}"
+          body: |
+            ## Computer Information
+            \`\`\`
+            ${{ env.version_info }}
+            \`\`\`
+            ## Benchmark Report
+            ${{ env.benchmark_output }}
           comment-id: ${{ steps.find_comment.outputs.comment-id }}
           edit-mode: replace
