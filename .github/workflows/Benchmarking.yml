@@ -38,6 +38,10 @@ jobs:
             echo "EOF"
           } >> $GITHUB_ENV
 
+          # Print benchmark results to the workflow log
+          echo "Benchmark Results:"
+          echo "$BENCHMARK_OUTPUT"
+
       - name: Find Existing Comment
         uses: peter-evans/find-comment@v3
         id: find_comment
