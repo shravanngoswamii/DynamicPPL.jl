@@ -4,3 +4,4 @@ To run the benchmarks, simply do this from the root directory of the repository:
 julia --project=benchmarks benchmarks/benchmarks.jl
 ```
 
+hello
